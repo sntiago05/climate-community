@@ -1,0 +1,51 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f0fdf4;
+    color: #1f2937;
+    text-align: center;
+    margin: 30px;
+}
+
+table {
+    margin: 20px auto;
+    border-collapse: collapse;
+    width: 90%;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+th {
+    background: #34d399;
+    color: white;
+}
+
+#map {
+    height: 400px;
+    width: 90%;
+    margin: 20px auto;
+    border-radius: 10px;
+}
+
+form {
+    margin: 20px auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    max-width: 900px;
+}
+
+form input, form button, textarea {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+form button {
+    background-color: #34d399;
+    color: white;
+    cursor: pointer;
+}
