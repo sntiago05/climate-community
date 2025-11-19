@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛠️ Admin Dashboard - Climate Community</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .danger:hover {
+            background-color: #dc2626;
+        }
+
+        .sidebar {
+            width: 250px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+<div class="flex">
+    <!-- SIDEBAR -->
+    <aside class="sidebar bg-green-700 text-white p-4 min-h-screen">
+        <h2 class="text-xl font-bold mb-6">🛠️ Admin</h2>
+        <nav class="space-y-2">
+            <button onclick="mostrarTab('stats')" class="tab-btn w-full text-left p-2 rounded hover:bg-green-600">📊
+                Estadísticas
+            </button>
+            <button onclick="mostrarTab('acciones')" class="tab-btn w-full text-left p-2 rounded hover:bg-green-600">📍
+                Acciones
+            </button>
+            <button onclick="mostrarTab('resenas')" class="tab-btn w-full text-left p-2 rounded hover:bg-green-600">💬
+                Reseñas
+            </button>
+            <button onclick="mostrarTab('usuarios')" class="tab-btn w-full text-left p-2 rounded hover:bg-green-600">👥
+                Usuarios
+            </button>
+            <hr class="my-4 border-green-600">
+            <button onclick="logout()" class="w-full text-left p-2 rounded hover:bg-red-600">🚪 Salir</button>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 p-6">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-green-700">🌿 Climate Community Admin</h1>
+            <span id="userInfo" class="text-gray-600"></span>
+        </header>
+
+        <!-- ESTADÍSTICAS -->
+        <section id="stats" class="tab-content active">
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="bg-blue-500 text-white p-6 rounded-lg shadow">
+                    <p class="text-sm">Total Acciones</p>
+                    <p id="stat-acciones" class="text-3xl font-bold">0</p>
+                </div>
+                <div class="bg-purple-500 text-white p-6 rounded-lg shadow">
+                    <p class="text-sm">Total Reseñas</p>
+                    <p id="stat-resenas" class="text-3xl font-bold">0</p>
+                </div>
+                <div class="bg-orange-500 text-white p-6 rounded-lg shadow">
+                    <p class="text-sm">Total Usuarios</p>
+                    <p id="stat-usuarios" class="text-3xl font-bold">0</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- GESTIÓN DE ACCIONES -->
+        <section id="acciones" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4">Gestionar Acciones</h2>
+            <table class="w-full bg-white shadow rounded">
+                <thead class="bg-green-600 text-white">
+                <tr>
+                    <th class="p-3 text-left">Nombre</th>
+                    <th class="p-3 text-left">Tipo</th>
+                    <th class="p-3 text-left">Ubicación</th>
+                    <th class="p-3 text-left">Acciones</th>
+                </tr>
+                </thead>
+                <tbody id="tabla-acciones"></tbody>
+            </table>
+        </section>
+
+        <!-- GESTIÓN DE RESEÑAS -->
+        <section id="resenas" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4">Gestionar Reseñas</h2>
+            <table class="w-full bg-white shadow rounded">
+                <thead class="bg-green-600 text-white">
+                <tr>
+                    <th class="p-3 text-left">Acción</th>
+                    <th class="p-3 text-left">Usuario</th>
+                    <th class="p-3 text-left">Comentario</th>
+                    <th class="p-3 text-left">Imagen</th>
+                    <th class="p-3 text-left">Acciones</th>
+                </tr>
+                </thead>
+                <tbody id="tabla-resenas"></tbody>
+            </table>
+        </section>
+
+        <!-- GESTIÓN DE USUARIOS -->
+        <section id="usuarios" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4">Gestionar Usuarios</h2>
+            <table class="w-full bg-white shadow rounded">
+                <thead class="bg-green-600 text-white">
+                <tr>
+                    <th class="p-3 text-left">Nombre</th>
+                    <th class="p-3 text-left">Email</th>
+                    <th class="p-3 text-left">Rol</th>
+                </tr>
+                </thead>
+                <tbody id="tabla-usuarios"></tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+<!-- MODAL: Ver Imagen -->
+<div id="imageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-4 rounded-lg">
+        <img id="modalImage" src="" alt="Imagen" class="max-w-md max-h-96">
+        <button onclick="document.getElementById('imageModal').classList.add('hidden')"
+                class="mt-4 bg-red-600 text-white px-4 py-2 rounded">Cerrar
+        </button>
+    </div>
+</div>
+
+<!-- MODAL: Editar Acción -->
+<div id="editAccionModal"
+     class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-white p-6 rounded-lg max-w-2xl w-full my-8">
+        <h3 class="text-xl font-bold mb-4">✏️ Editar Acción</h3>
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+            <div>
+                <label class="block text-sm font-semibold mb-1">Nombre</label>
+                <input type="text" id="editNombre" class="w-full border p-2 rounded">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1">Tipo</label>
+                <input type="text" id="editTipo" class="w-full border p-2 rounded">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1">Ubicación</label>
+                <input type="text" id="editUbicacion" class="w-full border p-2 rounded">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1">Responsable</label>
+                <input type="text" id="editResponsable" class="w-full border p-2 rounded">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1">Resultados</label>
+                <textarea id="editResultados" class="w-full border p-2 rounded h-16"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Fecha Inicio</label>
+                    <input type="date" id="editFechaInicio" class="w-full border p-2 rounded">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Fecha Fin</label>
+                    <input type="date" id="editFechaFin" class="w-full border p-2 rounded">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1">Foto</label>
+                <input type="file" id="editFoto" accept="image/*" class="w-full border p-2 rounded">
+                <p class="text-xs text-gray-600 mt-1">Imagen opcional (máx 5MB)</p>
+            </div>
+        </div>
+        <div class="flex gap-2 mt-6">
+            <button onclick="guardarEdicionAccion()"
+                    class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Guardar
+            </button>
+            <button onclick="cerrarEditAccionModal()" class="flex-1 bg-gray-400 text-white px-4 py-2 rounded">Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+<div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg max-w-md">
+        <h3 class="text-xl font-bold mb-4">✏️ Editar Reseña</h3>
+        <textarea id="editComentario" class="w-full border p-3 rounded mb-3 h-24"
+                  placeholder="Comentario..."></textarea>
+        <input type="file" id="editImagen" accept="image/*" class="w-full border p-2 rounded mb-3">
+        <p class="text-xs text-gray-600 mb-3">Imagen opcional (máx 5MB)</p>
+        <div class="flex gap-2">
+            <button onclick="guardarEdicion()"
+                    class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Guardar
+            </button>
+            <button onclick="cerrarEditModal()" class="flex-1 bg-gray-400 text-white px-4 py-2 rounded">Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem("token");
+    const nombre = localStorage.getItem("nombre");
+    const rol = localStorage.getItem("rol");
+
+    if (!token || rol !== "admin") {
+        alert("Acceso denegado");
+        window.location.href = "login.html";
+    }
+
+    document.getElementById("userInfo").textContent = `👤 ${nombre} (Admin)`;
+
+    let datosGlobales = {}; // Variable global para guardar datos
+
+    async function cargarStats() {
+        try {
+            const res = await fetch("/api/admin/stats", {
+                headers: {"Authorization": "Bearer " + token}
+            });
+            if (!res.ok) throw new Error("No autorizado");
+
+            const data = await res.json();
+            datosGlobales = data; // Guardar globalmente
+
+            document.getElementById("stat-acciones").textContent = data.totalAcciones;
+            document.getElementById("stat-resenas").textContent = data.totalResenas;
+            document.getElementById("stat-usuarios").textContent = data.totalUsuarios;
+
+            // Llenar tabla de acciones
+            const tablaAcciones = document.getElementById("tabla-acciones");
+            tablaAcciones.innerHTML = data.acciones.map(a => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">${a.nombre}</td>
+                        <td class="p-3">${a.tipo}</td>
+                        <td class="p-3">${a.ubicacion}</td>
+                        <td class="p-3">
+                            <button onclick="abrirEditAccionModal(${a.id})" class="bg-blue-600 text-white px-2 py-1 rounded mr-2">Editar</button>
+                            <button onclick="eliminarAccion(${a.id})" class="bg-red-600 text-white px-2 py-1 rounded danger">Eliminar</button>
+                        </td>
+                    </tr>
+                `).join("");
+
+            // Llenar tabla de reseñas
+            const tablaResenas = document.getElementById("tabla-resenas");
+            tablaResenas.innerHTML = data.reseñas.map(r => {
+                const accion = data.acciones.find(a => a.id === r.accionId);
+                return `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="p-3">${accion?.nombre || "N/A"}</td>
+                            <td class="p-3">${r.usuario}</td>
+                            <td class="p-3 max-w-xs truncate">${r.comentario}</td>
+                            <td class="p-3">
+                                ${r.imagenUrl ? `<button onclick="verImagen('${r.imagenUrl}')" class="text-blue-600 underline">Ver 🖼️</button>` : "—"}
+                            </td>
+                            <td class="p-3">
+                                <button onclick="abrirEditModal(${r.id}, '${r.comentario.replace(/'/g, "\\'")}', '${r.imagenUrl || ''}')" class="bg-blue-600 text-white px-2 py-1 rounded mr-2">Editar</button>
+                                <button onclick="eliminarResena(${r.id})" class="bg-red-600 text-white px-2 py-1 rounded danger">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+            }).join("");
+
+            // Llenar tabla de usuarios
+            const tablaUsuarios = document.getElementById("tabla-usuarios");
+            tablaUsuarios.innerHTML = data.usuarios.map(u => `
+                    <tr class="border-b">
+                        <td class="p-3">${u.nombre}</td>
+                        <td class="p-3">${u.email}</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded ${u.rol === 'admin' ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}">${u.rol}</span></td>
+                    </tr>
+                `).join("");
+
+        } catch (err) {
+            console.error(err);
+            alert("Error al cargar datos");
+        }
+    }
+
+    async function eliminarAccion(id) {
+        if (!confirm("¿Eliminar esta acción?")) return;
+        try {
+            const res = await fetch(`/api/acciones/${id}`, {
+                method: "DELETE",
+                headers: {"Authorization": "Bearer " + token}
+            });
+            if (res.ok) {
+                alert("✅ Acción eliminada");
+                cargarStats();
+            } else {
+                alert("❌ Error al eliminar");
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function eliminarResena(id) {
+        if (!confirm("¿Eliminar esta reseña?")) return;
+        try {
+            const res = await fetch(`/api/resenas/${id}`, {
+                method: "DELETE",
+                headers: {"Authorization": "Bearer " + token}
+            });
+            if (res.ok) {
+                alert("✅ Reseña eliminada");
+                cargarStats();
+            } else {
+                alert("❌ Error al eliminar");
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    let resenaEnEdicion = null;
+
+    function abrirEditModal(id, comentario, imagenUrl) {
+        resenaEnEdicion = {id, comentario, imagenUrl};
+        document.getElementById("editComentario").value = comentario;
+        document.getElementById("editModal").classList.remove("hidden");
+    }
+
+    function cerrarEditModal() {
+        document.getElementById("editModal").classList.add("hidden");
+        resenaEnEdicion = null;
+        document.getElementById("editComentario").value = "";
+        document.getElementById("editImagen").value = "";
+    }
+
+    async function guardarEdicion() {
+        if (!resenaEnEdicion) return;
+
+        const comentario = document.getElementById("editComentario").value.trim();
+        if (!comentario) {
+            return alert("El comentario no puede estar vacío");
+        }
+
+        const formData = new FormData();
+        formData.append("comentario", comentario);
+
+        const imagenFile = document.getElementById("editImagen").files[0];
+        if (imagenFile) {
+            formData.append("imagen", imagenFile);
+        }
+
+        try {
+            const res = await fetch(`/api/resenas/${resenaEnEdicion.id}`, {
+                method: "PUT",
+                headers: {"Authorization": "Bearer " + token},
+                body: formData
+            });
+
+            if (res.ok) {
+                alert("✅ Reseña editada correctamente");
+                cerrarEditModal();
+                cargarStats();
+            } else {
+                const data = await res.json();
+                alert("❌ Error: " + (data.error || "No se pudo editar"));
+            }
+        } catch (err) {
+            console.error(err);
+            alert("❌ Error conectando con el servidor");
+        }
+    }
+
+    function verImagen(url) {
+        document.getElementById("modalImage").src = url;
+        document.getElementById("imageModal").classList.remove("hidden");
+    }
+
+    function editarAccion(id) {
+        alert("Función de edición en desarrollo");
+    }
+
+    function mostrarTab(tab) {
+        document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+        document.getElementById(tab).classList.add("active");
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
+    // FUNCIONES PARA EDITAR ACCIONES
+    let accionEnEdicion = null;
+
+    function abrirEditAccionModal(id) {
+        const accion = datosGlobales.acciones?.find(a => a.id === id);
+        if (!accion) {
+            alert("Acción no encontrada");
+            return;
+        }
+
+        accionEnEdicion = accion;
+        document.getElementById("editNombre").value = accion.nombre;
+        document.getElementById("editTipo").value = accion.tipo;
+        document.getElementById("editUbicacion").value = accion.ubicacion;
+        document.getElementById("editResponsable").value = accion.responsable;
+        document.getElementById("editResultados").value = accion.resultados;
+        document.getElementById("editFechaInicio").value = accion.fecha_inicio;
+        document.getElementById("editFechaFin").value = accion.fecha_fin;
+        document.getElementById("editAccionModal").classList.remove("hidden");
+    }
+
+    function cerrarEditAccionModal() {
+        document.getElementById("editAccionModal").classList.add("hidden");
+        accionEnEdicion = null;
+        document.getElementById("editFoto").value = "";
+    }
+
+    async function guardarEdicionAccion() {
+        if (!accionEnEdicion) return;
+
+        const nombre = document.getElementById("editNombre").value.trim();
+        const tipo = document.getElementById("editTipo").value.trim();
+        const ubicacion = document.getElementById("editUbicacion").value.trim();
+        const responsable = document.getElementById("editResponsable").value.trim();
+        const resultados = document.getElementById("editResultados").value.trim();
+        const fecha_inicio = document.getElementById("editFechaInicio").value;
+        const fecha_fin = document.getElementById("editFechaFin").value;
+
+        if (!nombre || !tipo || !ubicacion) {
+            return alert("Completa los campos requeridos");
+        }
+
+        const formData = new FormData();
+        formData.append("nombre", nombre);
+        formData.append("tipo", tipo);
+        formData.append("ubicacion", ubicacion);
+        formData.append("responsable", responsable);
+        formData.append("resultados", resultados);
+        formData.append("fecha_inicio", fecha_inicio);
+        formData.append("fecha_fin", fecha_fin);
+
+        const fotoFile = document.getElementById("editFoto").files[0];
+        if (fotoFile) {
+            formData.append("foto", fotoFile);
+        }
+
+        try {
+            const res = await fetch(`/api/acciones/${accionEnEdicion.id}`, {
+                method: "PUT",
+                headers: {"Authorization": "Bearer " + token},
+                body: formData
+            });
+
+            if (res.ok) {
+                alert("✅ Acción editada correctamente");
+                cerrarEditAccionModal();
+                cargarStats();
+            } else {
+                const data = await res.json();
+                alert(" Error: " + (data.error || "No se pudo editar"));
+            }
+        } catch (err) {
+            console.error(err);
+            alert(" Error conectando con el servidor");
+        }
+    }
+
+    // Cargar datos al abrir
+    cargarStats();
+    setInterval(cargarStats, 5000);
+</script>
+</body>
+</html>
