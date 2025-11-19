@@ -30,6 +30,7 @@ db.serialize(() => {
             fecha_fin    TEXT,
             latitud      REAL,
             longitud     REAL,
+            foto         TEXT DEFAULT NULL,
             creador_id   INTEGER,
             FOREIGN KEY (creador_id) REFERENCES usuarios (id)
         )
@@ -48,24 +49,66 @@ db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS reseñas
         (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            accion_id  INTEGER,
-            usuario_id INTEGER,
-            comentario TEXT,
-            fecha      TEXT,
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            accion_id      INTEGER,
+            usuario_id     INTEGER,
+            usuario_nombre TEXT DEFAULT NULL,
+            comentario     TEXT,
+            imagen_url     TEXT DEFAULT NULL,
+            fecha          TEXT,
             FOREIGN KEY (accion_id) REFERENCES acciones_ambientales (id) ON DELETE CASCADE,
             FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         )
     `);
 
-    // Crear admin solo si no existe
+    // ===== AGREGAR COLUMNAS FALTANTES SI NO EXISTEN =====
+
+    // Agregar columna foto a acciones_ambientales si no existe
+    db.all("PRAGMA table_info(acciones_ambientales)", (err, columns) => {
+        if (!err && columns) {
+            const tieneColumnFoto = columns.some(col => col.name === 'foto');
+            if (!tieneColumnFoto) {
+                db.run(`ALTER TABLE acciones_ambientales
+                    ADD COLUMN foto TEXT DEFAULT NULL`, (err) => {
+                    if (err) console.log("Columna 'foto' ya existe en acciones_ambientales");
+                    else console.log("✅ Columna 'foto' agregada a acciones_ambientales");
+                });
+            }
+        }
+    });
+
+    // Agregar columna imagen_url a reseñas si no existe
+    db.all("PRAGMA table_info(reseñas)", (err, columns) => {
+        if (!err && columns) {
+            const tieneColumnImagen = columns.some(col => col.name === 'imagen_url');
+            if (!tieneColumnImagen) {
+                db.run(`ALTER TABLE reseñas
+                    ADD COLUMN imagen_url TEXT DEFAULT NULL`, (err) => {
+                    if (err) console.log("Columna 'imagen_url' ya existe en reseñas");
+                    else console.log("✅ Columna 'imagen_url' agregada a reseñas");
+                });
+            }
+
+            // Agregar columna usuario_nombre a reseñas si no existe
+            const tieneColumnUsuario = columns.some(col => col.name === 'usuario_nombre');
+            if (!tieneColumnUsuario) {
+                db.run(`ALTER TABLE reseñas
+                    ADD COLUMN usuario_nombre TEXT DEFAULT NULL`, (err) => {
+                    if (err) console.log("Columna 'usuario_nombre' ya existe en reseñas");
+                    else console.log("✅ Columna 'usuario_nombre' agregada a reseñas");
+                });
+            }
+        }
+    });
+
+    // ===== CREAR ADMIN POR DEFECTO SI NO EXISTE =====
     db.get(`SELECT COUNT(*) AS c
             FROM usuarios`, (err, row) => {
         if (!err && row.c === 0) {
             const saltRounds = 10;
             bcrypt.hash("1234", saltRounds, (err, hashedPassword) => {
                 if (err) {
-                    console.error("Error al hashear la contraseña del admin:", err);
+                    console.error("❌ Error al hashear la contraseña del admin:", err);
                     return;
                 }
                 db.run(
@@ -74,9 +117,9 @@ db.serialize(() => {
                     ["Admin", "admin@climate.com", hashedPassword, "admin"],
                     function (err) {
                         if (err) {
-                            console.error("Error al insertar admin:", err);
+                            console.error("❌ Error al insertar admin:", err);
                         } else {
-                            console.log("Usuario admin creado: admin@climate.com / 1234");
+                            console.log("✅ Usuario admin creado: admin@climate.com / 1234");
 
                             // Insertar acciones de ejemplo después de crear el admin
                             const adminId = this.lastID;
@@ -98,7 +141,7 @@ db.serialize(() => {
                                 `, [adminId, adminId, adminId],
                                 (err) => {
                                     if (err) {
-                                        console.error("Error al insertar acciones:", err);
+                                        console.error("❌ Error al insertar acciones:", err);
                                     } else {
                                         console.log("🌱 Acciones ambientales de ejemplo insertadas.");
                                     }
@@ -112,5 +155,5 @@ db.serialize(() => {
     });
 });
 
-console.log("Base de datos lista");
+console.log("✅ Base de datos lista");
 module.exports = db;

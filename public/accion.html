@@ -1,21 +1,176 @@
+<!-- accion.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Detalle de Acción Ambiental</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-<div id="detalle"></div>
-<h3>📸 Fotos</h3>
-<div id="fotos"></div>
+<body class="bg-green-50">
+<header class="bg-green-600 text-white p-4">
+    <a href="index.html" class="text-white hover:underline">← Volver</a>
+    <h1 class="text-2xl font-bold mt-2">🌿 Climate Community</h1>
+</header>
 
-<h3>💬 Reseñas</h3>
-<div id="reseñas"></div>
+<main class="p-6 max-w-4xl mx-auto">
+    <div id="detalle" class="bg-white p-6 rounded-lg shadow-md mb-6"></div>
 
-<textarea id="comentario" placeholder="Escribe tu reseña..."></textarea>
-<button id="enviarReseña">Enviar</button>
+    <h3 class="text-xl font-bold mt-8 mb-4">📸 Fotos de Reseñas</h3>
+    <div id="fotos" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
 
-<script src="accion.js"></script>
+    <h3 class="text-xl font-bold mt-8 mb-4">💬 Reseñas</h3>
+    <div id="reseñas" class="space-y-4 mb-6"></div>
+
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <h4 class="font-bold mb-3">Escribir Reseña</h4>
+        <form id="formResena" class="space-y-3">
+            <textarea id="comentario" placeholder="Escribe tu reseña..." required
+                      class="w-full border p-3 rounded h-24"></textarea>
+            <input type="file" id="imagen" accept="image/*" class="w-full border p-2 rounded">
+            <p class="text-xs text-gray-600">Imagen opcional (máx 5MB)</p>
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">📤 Enviar Reseña
+            </button>
+        </form>
+    </div>
+</main>
+
+<script>
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) {
+        document.body.innerHTML = "<h3 class='p-6'>❌ ID no especificado</h3>";
+        throw new Error("No id");
+    }
+
+    const token = localStorage.getItem("token");
+
+    async function cargar() {
+        try {
+            // Cargar acción
+            const res = await fetch(`/api/acciones/${id}`);
+            if (!res.ok) return (document.body.innerHTML = "<h3 class='p-6'>❌ Acción no encontrada</h3>");
+            const accion = await res.json();
+
+            document.getElementById("detalle").innerHTML = `
+            <h2 class="text-3xl font-bold mb-3">${accion.nombre}</h2>
+            <p class="mb-2"><b>Tipo:</b> ${accion.tipo}</p>
+            <p class="mb-2"><b>Ubicación:</b> ${accion.ubicacion}</p>
+            <p class="mb-2"><b>Responsable:</b> ${accion.responsable}</p>
+            <p class="mb-2"><b>Resultados:</b> ${accion.resultados}</p>
+            <p class="text-sm text-gray-600"><b>Período:</b> ${accion.fecha_inicio} a ${accion.fecha_fin}</p>
+        `;
+
+            // Cargar fotos
+            const fotos = await (await fetch(`/api/acciones/${id}/fotos`)).json();
+            document.getElementById("fotos").innerHTML =
+                fotos.length ? fotos.map(f => `<img src="${f.url}" alt="Foto" class="w-full h-32 object-cover rounded shadow cursor-pointer" onclick="verImagen('${f.url}')">`).join("") : "<p class='col-span-full text-gray-600'>No hay fotos</p>";
+
+            // Cargar reseñas
+            const resReseñas = await fetch(`/api/acciones/${id}/resenas`);
+            if (!resReseñas.ok) {
+                console.error("Error al cargar reseñas:", await resReseñas.text());
+                return;
+            }
+            const reseñas = await resReseñas.json();
+
+            const contenedor = document.getElementById("reseñas");
+            if (reseñas.length) {
+                contenedor.innerHTML = reseñas.map(r => `
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-bold text-green-700">${r.usuario}</p>
+                            <p class="text-sm text-gray-600">${new Date(r.fecha).toLocaleDateString()}</p>
+                        </div>
+                        ${token ? `<button onclick="eliminarResena(${r.id})" class="text-red-600 text-sm hover:underline">Eliminar</button>` : ''}
+                    </div>
+                    <p class="mt-2">${r.comentario}</p>
+                    ${r.imagenUrl ? `<img src="${r.imagenUrl}" alt="Imagen reseña" class="mt-3 max-w-xs rounded shadow cursor-pointer" onclick="verImagen('${r.imagenUrl}')">` : ''}
+                </div>
+            `).join("");
+            } else {
+                contenedor.innerHTML = "<p class='text-gray-600'>No hay reseñas aún</p>";
+            }
+
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // Modal para ver imágenes
+    function verImagen(url) {
+        const modal = document.createElement("div");
+        modal.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+        modal.innerHTML = `
+        <div class="bg-white p-4 rounded-lg">
+            <img src="${url}" alt="Imagen" class="max-w-2xl max-h-96">
+            <button onclick="this.parentElement.parentElement.remove()" class="mt-4 bg-red-600 text-white px-4 py-2 rounded w-full">Cerrar</button>
+        </div>
+    `;
+        document.body.appendChild(modal);
+    }
+
+    // Enviar reseña con imagen
+    document.getElementById("formResena").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const comentario = document.getElementById("comentario").value.trim();
+        const imagenFile = document.getElementById("imagen").files[0];
+
+        if (!comentario) return alert("Escribe algo.");
+        if (!token) return alert("Debes iniciar sesión.");
+
+        const formData = new FormData();
+        formData.append("comentario", comentario);
+        if (imagenFile) formData.append("imagen", imagenFile);
+
+        try {
+            const res = await fetch(`/api/acciones/${id}/resenas`, {
+                method: "POST",
+                headers: {"Authorization": "Bearer " + token},
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("✅ Reseña enviada");
+                document.getElementById("comentario").value = "";
+                document.getElementById("imagen").value = "";
+                cargar();
+            } else {
+                alert("Error: " + (data.error || "No se pudo enviar reseña"));
+            }
+        } catch (err) {
+            console.error(err);
+            alert("❌ Error conectando con el servidor.");
+        }
+    });
+
+    async function eliminarResena(resenaId) {
+        const rol = localStorage.getItem("rol");
+        if (rol !== "admin") return alert("Solo admins pueden eliminar");
+
+        if (!confirm("¿Eliminar esta reseña?")) return;
+
+        try {
+            const res = await fetch(`/api/resenas/${resenaId}`, {
+                method: "DELETE",
+                headers: {"Authorization": "Bearer " + token}
+            });
+
+            if (res.ok) {
+                alert("✅ Reseña eliminada");
+                cargar();
+            } else {
+                alert("❌ Error al eliminar");
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    cargar();
+    setInterval(cargar, 10000); // Actualizar cada 10 segundos
+</script>
 </body>
 </html>
